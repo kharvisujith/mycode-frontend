@@ -1,4 +1,4 @@
-import { Divider, Grid, TableContainer,Table,TableBody,TableRow,TableCell, Typography } from "@mui/material"
+import { Divider, Grid, TableContainer,Table,TableBody,TableRow,TableCell, Typography, TextField } from "@mui/material"
 import { Box, height } from "@mui/system"
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
@@ -6,52 +6,73 @@ import { useParams } from "react-router-dom"
 import { Products } from "../../models/Products"
 import agent from '../../api/agent'
 import LoadingComponent from "../../Layouts/LoadingComponent"
+import { LoadingButton } from "@mui/lab"
+import { useStoreContext } from "../../context/StoreContext"
+import { useAppDispatch, useAppSelector } from "../../store/configureStore"
+import {  addBasketItemAsync, removeBasketItemAsync, setBasket } from "../basket/basketSlice"
+import NotFound from "../../errors/NotFound"
+import { fetchProductAsync, productSelectors } from "../catalog/catalogSlice"
 
 const Productdetials = ()=>{
+    const {basket,status} = useAppSelector((state)=> state.basket)
+    const dispatch = useAppDispatch()
     const {id} = useParams<{id:string}>()
-    const [prod, setprod] = useState<Products>()
-    // const arrdata = [{title:'Name', val:`${prod?.name}`,
-    //                  {title:'Brand', val:`${prod?.brand}`,
-    //                  {title:'Seller', val:`${prod?.seller}`,
-    //                  {title:'In Stock', val:`${prod?.stock}`
-    //                 ]
-    // const kk = [{name:'suu',val:'kdfk'},{name:'sjf'}]
 
-    const [loading, setLoading] = useState(true)
+    const product = useAppSelector(state => productSelectors.selectById(state, id))
+
+    const {status: productStatus} = useAppSelector(state=> state.catalog)
+    
+
+
+   
+   
+    const item = basket?.items.find(i => i.productId === product?.id) 
+    const [quantity, setQuantity] = useState(0)
+
+
+    const handleInputChange = (event: any)=> {
+        if(event.target.value >= 0){
+            setQuantity(parseInt(event.target.value))
+
+        }
+    }
+
+    const handleUpdateCart = ()=>{
+        if(!item || quantity > item.quantity){
+            const updatedQuantity = item ? quantity - item?.quantity: quantity
+            dispatch(addBasketItemAsync({productId:product?.id!, quantity: updatedQuantity}))
+           
+        }
+        else{
+            const updatedQuantity = item.quantity - quantity
+            dispatch(removeBasketItemAsync({productId:product?.id!, quantity: updatedQuantity}))
+            
+        }
+    }
+
 
     useEffect(()=>{
-            // console.log("called useeffec in product details")
+      
+            if(item) setQuantity(item.quantity)
+            if(!product) dispatch(fetchProductAsync(parseInt(id)))
 
-            //  fetch(`https://localhost:44323/api/products/${id}`)
-            // .then(res => res.json())
-            // .then(data=> setprod(data))
+    },[id,item, dispatch, product])
 
-            agent.catalog.details(parseInt(id))
-            .then(data =>setprod(data))
-            .catch(error=> console.log(error))
-            .finally(()=> setLoading(false))
+    if(productStatus.includes('pending')) return <LoadingComponent />
 
-
-            // const val = data.filter((cur)=>{
-            //     return( cur.id.toString() === id)
-            // })
-            // setprod(val[0])
-
-    },[id])
-
-    if(loading) return <LoadingComponent />
+    if(!product) return <NotFound />
 
     return(
         <>
         <Grid container>
             <Grid item sm={6} width='100%' display='flex' justifyContent='center'  >
-                <img src={prod?.pictureUrl} alt={prod?.name} style={{height:400}}  />
+                <img src={product?.pictureUrl} alt={product?.name} style={{height:400}}  />
             </Grid>
             <Grid item sm={6}>
-                <Typography variant='h4' color='primary.main' fontWeight='bold'>{prod?.name.toUpperCase()}</Typography>
+                <Typography variant='h4' color='primary.main' fontWeight='bold'>{product?.name.toUpperCase()}</Typography>
                 <Divider />
             
-                <Typography variant='h5' color='primary.main' fontWeight='bold' sx={{my:2}}>${prod?.price?.toFixed(2)}</Typography>
+                <Typography variant='h5' color='primary.main' fontWeight='bold' sx={{my:2}}>${product?.price?.toFixed(2)}</Typography>
                 <Divider />
 
                 <TableContainer>
@@ -62,7 +83,7 @@ const Productdetials = ()=>{
                                     Name
                                 </TableCell>
                                 <TableCell>
-                                    {prod?.name}
+                                    {product?.name}
                                 </TableCell>
                             </TableRow>
                         
@@ -71,7 +92,7 @@ const Productdetials = ()=>{
                                     Description
                                 </TableCell>
                                 <TableCell>
-                                    {prod?.description}
+                                    {product?.description}
                                 </TableCell>
                             </TableRow>
                             <TableRow>
@@ -79,7 +100,7 @@ const Productdetials = ()=>{
                                     Type 
                                 </TableCell>
                                 <TableCell>
-                                    {prod?.type} 
+                                    {product?.type} 
                                 </TableCell>
                             </TableRow>
                             <TableRow>
@@ -87,7 +108,7 @@ const Productdetials = ()=>{
                                     Brand 
                                 </TableCell>
                                 <TableCell>
-                                    {prod?.brand} 
+                                    {product?.brand} 
                                 </TableCell>
                             </TableRow>
                             <TableRow>
@@ -95,15 +116,46 @@ const Productdetials = ()=>{
                                     In Stock
                                 </TableCell>
                                 <TableCell>
-                                    {prod?.quantityInStock}
+                                    {product?.quantityInStock}
                                 </TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>
                 </TableContainer>
             </Grid>
-
         </Grid>
+        <Grid container spacing={2}>
+            <Grid item xs={6}></Grid>
+            <Grid item>
+                <TextField
+                    variant='outlined'
+                    type='number'
+                    label= 'Quantity in Cart'
+                    fullWidth
+                    value={quantity}
+                    onChange ={handleInputChange}
+                /> 
+            </Grid>
+            <Grid item>
+            <LoadingButton
+             disabled={item?.quantity === quantity ||!item && quantity===0}
+            sx={{
+                height:'55px'
+            }}
+            color='primary'
+            size='large'
+            variant = 'contained'
+            fullWidth
+            loading={status.includes('pending')}
+            onClick={handleUpdateCart}
+           
+            
+            >
+                {item? 'Update Quantity' : 'Add to cart'}
+                </LoadingButton>
+            </Grid>   
+        </Grid>
+       
         
         </>
     )

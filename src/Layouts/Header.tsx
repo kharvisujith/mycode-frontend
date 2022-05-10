@@ -4,8 +4,8 @@ import { AppBar, ListItem, List,Toolbar, Typography,IconButton,Badge } from "@mu
 import { Switch } from "@mui/material"
 import { Box } from "@mui/system"
 import { Link, NavLink } from "react-router-dom"
-
-
+import { useStoreContext } from '../context/StoreContext'
+import { useAppSelector } from '../store/configureStore'
 
 
 export interface Props{
@@ -24,6 +24,10 @@ const rightlinks = [
 ]
 
 const Header = ({setMode}:Props)=>{
+
+    const {basket} = useAppSelector((state)=> state.basket)
+    const itemCount = basket?.items.reduce((prevValue, curValue) => prevValue+ curValue.quantity, 0)
+
     return(
         <>
             <AppBar position='static' sx={{mb:5}}>
@@ -75,7 +79,7 @@ const Header = ({setMode}:Props)=>{
 
                     <Box display='flex'>
                     <IconButton component={Link} to={'/basket'} color='inherit'>
-                    <Badge badgeContent={4} color='secondary' >
+                    <Badge badgeContent={itemCount} color='secondary' >
                     <ShoppingCartIcon/>
                     </Badge>
                     </IconButton>

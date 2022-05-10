@@ -1,6 +1,6 @@
 import { ThemeProvider,createTheme } from '@mui/material';
 import { Container, CssBaseline } from '@mui/material';
-import { Component, useState } from 'react';
+import { Component, useEffect, useState } from 'react';
 import { Redirect, Route, Switch } from 'react-router-dom';
 
 import Header from './Header';
@@ -14,9 +14,38 @@ import 'react-toastify/dist/ReactToastify.css';
 import NotFound from '../errors/NotFound';
 import ServerError from  "../errors/ServerError";
 import BasketPage from '../Features/basket/BasketPage';
+import { useStoreContext } from '../context/StoreContext';
+import LoadingComponent from './LoadingComponent';
+import { getCookie } from '../util/util';
+import agent from '../api/agent';
+import CheckoutPage from '../Features/Checkout/CheckoutPage';
+import { setBasket } from '../Features/basket/basketSlice';
+import { useAppDispatch } from '../store/configureStore';
 
 
 const App = ()=> {
+
+  // calling a custom hook
+  // const {setBasket} = useStoreContext()
+
+  const dispatch = useAppDispatch()
+  const [loading, setLoading] = useState(true)
+
+
+  useEffect(()=>{
+    const buyerId = getCookie('buyerId')
+    if(buyerId){
+        agent.basket.get()
+        .then(basket => dispatch(setBasket(basket)))
+        .catch(error => console.log(error))
+        .finally(()=> setLoading(false))
+    }
+    else{
+      setLoading(false)
+    }
+    
+  },[dispatch])
+
 
   const [darkMode, setdarkMode] = useState(false);
   const modetype = darkMode? 'dark': 'light'
@@ -35,6 +64,9 @@ const App = ()=> {
     },
   });
 
+
+  if(loading) return <LoadingComponent/>
+
   return(
   
     <ThemeProvider theme = {darkTheme}>
@@ -52,6 +84,7 @@ const App = ()=> {
           <Route exact path= {'/catalog/:id'} component = {Productdetials} />
           <Route  path= {'/not-found'} component = {NotFound} />
           <Route  path= {'/server-error'} component = {ServerError} />
+          <Route  path= {'/checkout'} component = {CheckoutPage} />
           
           {/* <Redirect to={'/not-found'} /> */}
 

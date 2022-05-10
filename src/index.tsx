@@ -5,13 +5,26 @@ import App from './Layouts/App';
 import { Router } from 'react-router-dom';
 //import reportWebVitals from './reportWebVitals';
 import { createBrowserHistory } from 'history'
+import { StoreProvider } from './context/StoreContext';
 
+import { Provider } from 'react-redux';
+import { store } from './store/configureStore';
+import { fetchProductsAsync } from './Features/catalog/catalogSlice';
 export const history = createBrowserHistory()
+
+store.dispatch(fetchProductsAsync())
+
 
 ReactDOM.render(
   <React.StrictMode>
     <Router history={history}>
-      <App />
+      <StoreProvider>
+        <Provider store={store}>
+        <App />
+        </Provider>
+      
+      </StoreProvider>
+    
     </Router>
   </React.StrictMode>,
   document.getElementById('root')

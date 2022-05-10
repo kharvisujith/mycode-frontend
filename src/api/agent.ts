@@ -1,10 +1,17 @@
 import axios, { AxiosError, AxiosResponse } from "axios";
-import { resolve } from "path";
+//import { resolve } from "path";
 
+//import 'react-toastify/dist/ReactToastify.css'
+
+import "../../node_modules/react-toastify/dist/ReactToastify.css"
 import { toast } from 'react-toastify';
 import { history } from './../index';
+import { useAppSelector } from "../store/configureStore";
+import { PaginationResponse } from "../models/pagination";
 
-axios.defaults.baseURL = "https://localhost:44323/api"
+
+
+axios.defaults.baseURL = "http://localhost:16310/api"
 axios.defaults.withCredentials = true
 
 const resBody = (response: AxiosResponse) => response.data
@@ -13,9 +20,20 @@ const sleep = () => new Promise(resolve => setTimeout(resolve,500))
 
 axios.interceptors.response.use(async response =>{
     await sleep()
+
+    const pagination = response.headers['pagination']
+  
+    if(pagination){
+        response.data = new  PaginationResponse(response.data, JSON.parse(pagination))
+        return response
+
+    }
     return response
+
+
+  
 },(error:AxiosError) => {
-    const {data, status} = error.response!
+    const {data, status} = error.response as any
 
     switch(status){
         case 400: 
@@ -59,22 +77,26 @@ axios.interceptors.response.use(async response =>{
     )
 
 const request = {
-    get : (url : string) => axios.get(url).then(resBody),
+    // get : (url : string, params?:URLSearchParams) => axios.get(url, {params}).then(resBody),
+    get : (url:string, params?:URLSearchParams) => axios.get(url, {params}).then(resBody),
     post : (url:string, body:{}) => axios.post(url, body).then(resBody),
     put : (url:string, body:{}) => axios.put(url, body).then(resBody),
     delete: (url:string) => axios.delete(url).then(resBody)
 }
 
 const catalog = {
-    list : ()=>  request.get('products'),
-    details : (id:number) => request.get(`products/${id}`)
+     list : (params:URLSearchParams)=>  request.get('Products',params),
+    //  list : () => request.get(`Products?OrderBy=name&SerachItem=v&PageNumber=1&PageSize=6`),
+                            
+    details : (id:number) => request.get(`products/${id}`),
+    fetchfilters : ()=> request.get('products/filters')
 }
 
 
 const basket = {
     get : ()=> request.get('Basket'),
     addItem : (productId : number, quantity = 1)=> request.post(`basket?productId=${productId}&quantity=${quantity}`, {}),
-    removeIt3em : (productId : number, quantity = 1)=> request.delete(`basket?productId=${productId}&quantity=${quantity}`)
+    removeItem : (productId : number, quantity = 1)=> request.delete(`basket?productId=${productId}&quantity=${quantity}`)
 }
 
 const testErrors = {
